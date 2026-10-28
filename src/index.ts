@@ -123,7 +123,10 @@ async function handleMessage(msg: DiscordMessage, env: Env): Promise<void> {
     return;
   }
   if (msg.content.toLowerCase() === "!bing") {
-    await sendMessage(msg.channel_id, "bong! :statue_of_liberty:", env);
+    await sendMessageAttachment(
+      msg.channel_id, 
+      "bong! :statue_of_liberty:", 
+      env);
     return;
   }
 
@@ -148,3 +151,34 @@ async function sendMessage(
     body: JSON.stringify({ content }),
   });
 };
+
+async function sendMessageAttachment(
+  channelId: string,
+  content: string,
+  env: Env,
+): Promise<void> {
+  const payload = {
+    content: content,
+    embeds: [
+      {
+        image: {
+          url: "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExMnY5aGRsNHh4ajg5MzFxZmJqbG5xMG53ZGFuNW5sd2xxdHl5bG50YSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/BT0rUpCcIaiEbjmsTc/giphy.gif"
+        }
+      }
+    ]
+  };
+
+  const response = await fetch(`${DISCORD_API}/channels/${channelId}/messages`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bot ${env.DISCORD_BOT_TOKEN}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error(`Discord API Error (${response.status}):`, errorText);
+  }
+}

@@ -1,15 +1,39 @@
-// Wrangler config for vitest — not used at deploy time.
-// Consumers define their own wrangler config with the DO binding.
 {
   "name": "peat-botly",
   "main": "src/index.ts",
- "compatibility_date": "2026-10-27",
+  "observability": {
+    "enabled": false,
+    "head_sampling_rate": 1,
+    "logs": {
+      "enabled": true,
+      "head_sampling_rate": 1,
+      "invocation_logs": true,
+      "persist": true
+    },
+    "traces": {
+      "enabled": true,
+      "head_sampling_rate": 1,
+      "persist": true
+    },
+    "issues": {
+      "enabled": true
+    }
+  },
+  "compatibility_date": "2026-10-27",
   "durable_objects": {
     "bindings": [
-      { "name": "DISCORD_GATEWAY", "class_name": "DiscordGatewayDO" }
+      {
+        "name": "DISCORD_GATEWAY",
+        "class_name": "DiscordGatewayDO"
+      }
     ]
   },
   "migrations": [
-    { "tag": "v1", "new_sqlite_classes": ["DiscordGatewayDO"] }
+    {
+      "tag": "v1",
+      "new_sqlite_classes": [
+        "DiscordGatewayDO"
+      ]
+    }
   ]
 }
