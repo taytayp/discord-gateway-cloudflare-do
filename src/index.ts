@@ -8,17 +8,13 @@ export type {
   GatewayState,
 } from "./types";
 
-
 interface Env {
   DISCORD_GATEWAY: DurableObjectNamespace<DiscordGatewayDO>;
   DISCORD_BOT_TOKEN: string;
   DISCORD_GATEWAY_SECRET: string;
 }
 
-import {
-  DiscordGatewayDO,
-  getGatewayStub,
-} from "discord-gateway-cloudflare-do";
+import { DiscordGatewayDO, getGatewayStub } from "discord-gateway-cloudflare-do";
 
 // Re-export the Durable Object class so Cloudflare can instantiate it
 export { DiscordGatewayDO };
@@ -65,7 +61,7 @@ export default {
         return new Response("Unauthorized", { status: 401 });
       }
 
-      const event = await request.json() as ForwardedEvent;
+      const event = (await request.json()) as ForwardedEvent;
       ctx.waitUntil(handleEvent(event, env));
       return new Response("OK", { status: 200 });
     }
@@ -123,11 +119,36 @@ async function handleMessage(msg: DiscordMessage, env: Env): Promise<void> {
     return;
   }
   if (msg.content.toLowerCase() === "!bing") {
-    await sendMessageAttachment(
-      msg.channel_id, 
-      "bong! :statue_of_liberty:", 
-      env);
+    await sendMessageAttachment(msg.channel_id, "bong! :statue_of_liberty:", env);
     return;
+  }
+  if (msg.content.toLowerCase().includes("lmao")) {
+    if (Math.random() < 0.25) {
+      await addReactionToMessage(
+        msg.channel_id,
+        msg.id,
+        ["yusuke:788128744308211762"],
+        env
+      )
+    }
+  }
+
+  if (msg.content.toLowerCase().includes(" bot ") || msg.content.toLowerCase() === "bot") {
+    await addReactionToMessage(
+      msg.channel_id,
+      msg.id,
+      ["👀"],
+      env
+    )
+  }
+
+  if (msg.content.toLowerCase().includes("dogass")) {
+    await addReactionToMessage(
+      msg.channel_id,
+      msg.id,
+      ["🇩", "🇴", "🇬", "🇦", "🇸", "5️⃣"],
+      env
+    )
   }
 
   // Reply to DMs
@@ -150,7 +171,7 @@ async function sendMessage(
     },
     body: JSON.stringify({ content }),
   });
-};
+}
 
 async function sendMessageAttachment(
   channelId: string,
@@ -162,10 +183,10 @@ async function sendMessageAttachment(
     embeds: [
       {
         image: {
-          url: "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExMnY5aGRsNHh4ajg5MzFxZmJqbG5xMG53ZGFuNW5sd2xxdHl5bG50YSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/BT0rUpCcIaiEbjmsTc/giphy.gif"
-        }
-      }
-    ]
+          url: "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExMnY5aGRsNHh4ajg5MzFxZmJqbG5xMG53ZGFuNW5sd2xxdHl5bG50YSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/BT0rUpCcIaiEbjmsTc/giphy.gif",
+        },
+      },
+    ],
   };
 
   const response = await fetch(`${DISCORD_API}/channels/${channelId}/messages`, {
@@ -180,5 +201,43 @@ async function sendMessageAttachment(
   if (!response.ok) {
     const errorText = await response.text();
     console.error(`Discord API Error (${response.status}):`, errorText);
+  }
+}
+
+async function addReactionToMessage(
+  channelId: string,
+  messageId: string,
+  emoji_list: Array<string>,
+  env: Env,
+) {
+  const sleep = (ms: any) => new Promise((resolve) => setTimeout(resolve, ms));
+  for (const emoji of emoji_list) {
+    const url =
+      `https://discord.com/api/v10/channels/${channelId}/messages/${messageId}/reactions/` +
+      `${encodeURIComponent(emoji)}/@me`;
+
+    while (true) {
+      const response = await fetch(url, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bot ${env.DISCORD_BOT_TOKEN}`,
+        },
+      });
+
+      if (response.status === 429) {
+        const body: any = await response.json();
+        const retryAfterSeconds =
+          body.retry_after ?? Number(response.headers.get("Retry-After")) ?? 1;
+        await sleep(retryAfterSeconds * 1000);
+        continue; // Retry this emoji
+      }
+
+      if (!response.ok) {
+        console.error(`Failed for ${emoji}:`, response.status, await response.text());
+      }
+      break;
+    }
+
+    await sleep(400); // Pause before the next emoji
   }
 }
