@@ -36,7 +36,7 @@ interface Env {
 }
 
 /**
- * Forwarded Gateway event shape.
+  Forwarded Gateway event shape.
  * This is the format DiscordGatewayDO POSTs to your webhook URL.
  */
 interface ForwardedEvent {
