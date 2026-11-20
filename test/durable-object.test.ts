@@ -60,15 +60,15 @@ function makeEventedWebSocket() {
 }
 
 describe("DiscordGatewayDO", () => {
-  // -- connect / disconnect / status (via RPC) -----------------------------
+  // -- start / disconnect / status (via RPC) -------------------------------
 
-  describe("connect", () => {
+  describe("start", () => {
     it("rejects missing botToken", async () => {
       const id = env.DISCORD_GATEWAY.idFromName("test-missing-token");
       await runInDurableObject(
         env.DISCORD_GATEWAY.get(id),
         async (instance: DiscordGatewayDO) => {
-          const res = await instance.connect({
+          const res = await instance.start({
             botToken: "",
             webhookUrl: "https://example.com/webhooks/discord",
           });
@@ -83,7 +83,7 @@ describe("DiscordGatewayDO", () => {
       await runInDurableObject(
         env.DISCORD_GATEWAY.get(id),
         async (instance: DiscordGatewayDO) => {
-          const res = await instance.connect({
+          const res = await instance.start({
             botToken: "Bot token.here",
             webhookUrl: "",
           });
@@ -97,7 +97,7 @@ describe("DiscordGatewayDO", () => {
       await runInDurableObject(
         env.DISCORD_GATEWAY.get(id),
         async (instance: DiscordGatewayDO) => {
-          const res = await instance.connect({
+          const res = await instance.start({
             botToken: "Bot token.here",
             webhookUrl: "http://example.com/webhooks/discord",
           });
@@ -112,7 +112,7 @@ describe("DiscordGatewayDO", () => {
       await runInDurableObject(
         env.DISCORD_GATEWAY.get(id),
         async (instance: DiscordGatewayDO) => {
-          const res = await instance.connect({
+          const res = await instance.start({
             botToken: "Bot token.here",
             webhookUrl: "not-a-url",
           });
@@ -127,7 +127,7 @@ describe("DiscordGatewayDO", () => {
       await runInDurableObject(
         env.DISCORD_GATEWAY.get(id),
         async (instance: DiscordGatewayDO) => {
-          const res = await instance.connect({
+          const res = await instance.start({
             botToken: "token",
             webhookUrl: "https://user:pass@example.com/webhooks/discord",
           });
@@ -142,7 +142,7 @@ describe("DiscordGatewayDO", () => {
       await runInDurableObject(
         env.DISCORD_GATEWAY.get(id),
         async (instance: DiscordGatewayDO) => {
-          const res = await instance.connect({
+          const res = await instance.start({
             botToken: "token",
             webhookUrl: "https://localhost/webhooks/discord",
           });
@@ -161,7 +161,7 @@ describe("DiscordGatewayDO", () => {
             ok: true,
           });
 
-          const res = await instance.connect({
+          const res = await instance.start({
             botToken: "test-token",
             webhookUrl: "https://example.com/webhooks/discord",
             webhookSecret: "gateway-secret",
@@ -178,7 +178,7 @@ describe("DiscordGatewayDO", () => {
       );
     });
 
-    it("clears reconnectDisabled terminal state on explicit connect", async () => {
+    it("clears reconnectDisabled terminal state on explicit start", async () => {
       const id = env.DISCORD_GATEWAY.idFromName("test-connect-clears-terminal-state");
       await runInDurableObject(
         env.DISCORD_GATEWAY.get(id),
@@ -195,7 +195,7 @@ describe("DiscordGatewayDO", () => {
             ok: true,
           });
 
-          const result = await instance.connect({
+          const result = await instance.start({
             botToken: "test-token",
             webhookUrl: "https://example.com/webhooks/discord",
           });
@@ -524,7 +524,7 @@ describe("DiscordGatewayDO", () => {
             status: 401,
           });
 
-          const result = await instance.connect({
+          const result = await instance.start({
             botToken: "bad-token",
             webhookUrl: "https://example.com/webhook",
           });

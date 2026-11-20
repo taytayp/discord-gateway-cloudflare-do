@@ -180,7 +180,7 @@ export class DiscordGatewayDO<TEnv = unknown> extends DurableObject<TEnv> {
     await this.ctx.storage.put(CREDENTIALS_KEY, stored);
     this.cachedCredentials = stored;
 
-    // Explicit connect() should clear terminal reconnect-disabled mode.
+    // Explicit start() should clear terminal reconnect-disabled mode.
     const existingState = (await this.loadState()) ?? emptyState();
     existingState.reconnectDisabled = false;
     await this.saveState(existingState);
@@ -191,19 +191,6 @@ export class DiscordGatewayDO<TEnv = unknown> extends DurableObject<TEnv> {
       return { error: result.error };
     }
     return { status: "connecting" };
-  }
-
-  /**
-   * @deprecated Use {@link start} instead. This alias is unreachable
-   * through a `DurableObjectStub` because `Fetcher.connect(SocketAddress)`
-   * shadows it in the RPC dispatcher; it remains only for in-process
-   * callers (e.g. `runInDurableObject` in tests, or subclasses that
-   * call `super.connect(...)`). Will be removed in 0.2.
-   */
-  async connect(
-    credentials: GatewayCredentials,
-  ): Promise<{ status: "connecting" } | { error: string }> {
-    return this.start(credentials);
   }
 
   /**
@@ -1175,19 +1162,58 @@ function isPrivateIpv4(host: string): boolean {
 }
 
 function isPrivateIpv6(host: string): boolean {
-  // Handle IPv4-mapped IPv6 literals (e.g. ::ffff:127.0.0.1)
-  if (host.includes(".")) {
-    const ipv4 = host.slice(host.lastIndexOf(":") + 1);
+  // URL.hostname wraps IPv6 literals in brackets, e.g. "[::1]".
+  const lower = host.toLowerCase().replace(/^\[/, "").replace(/\]$/, "");
+
+  // IPv4-mapped address in dotted form (some runtimes keep this representation).
+  const dotted = lower.match(/^(?:::ffff:)?(\d{1,3}(?:\.\d{1,3}){3})$/);
+  if (dotted && isPrivateIpv4(dotted[1])) return true;
+
+  const words = expandIpv6(lower);
+  if (!words) return false;
+
+  // Unspecified (::) and loopback (::1)
+  if (words.every((word) => word === 0)) return true;
+  if (words.slice(0, 7).every((word) => word === 0) && words[7] === 1) {
+    return true;
+  }
+
+  // IPv4-mapped addresses are normalized to hex, e.g. ::ffff:7f00:1.
+  if (words.slice(0, 5).every((word) => word === 0) && words[5] === 0xffff) {
+    const ipv4 = [
+      words[6] >> 8,
+      words[6] & 0xff,
+      words[7] >> 8,
+      words[7] & 0xff,
+    ].join(".");
     if (isPrivateIpv4(ipv4)) return true;
   }
 
-  const lower = host.toLowerCase();
-
-  // Loopback/unspecified
-  if (lower === "::1" || lower === "::") return true;
-
   // Unique local fc00::/7 and link-local fe80::/10
-  return /^f[c-d]/i.test(lower) || /^fe[89ab]/i.test(lower);
+  if (words[0] >= 0xfc00 && words[0] <= 0xfdff) return true;
+  if (words[0] >= 0xfe80 && words[0] <= 0xfebf) return true;
+
+  return false;
+}
+
+/** Expand an IPv6 literal into eight 16-bit words, or null if malformed. */
+function expandIpv6(address: string): number[] | null {
+  const halves = address.split("::");
+  if (halves.length > 2) return null;
+
+  const parse = (group: string): number[] =>
+    group === ""
+      ? []
+      : group.split(":").map((part) => Number.parseInt(part, 16));
+
+  const left = parse(halves[0]);
+  const right = halves.length === 2 ? parse(halves[1]) : [];
+  if ([...left, ...right].some((word) => !Number.isInteger(word))) return null;
+
+  const missing = 8 - left.length - right.length;
+  if (halves.length === 2 ? missing < 1 : missing !== 0) return null;
+
+  return [...left, ...new Array<number>(missing).fill(0), ...right];
 }
 
 function isForwardedEventType(t: string): t is ForwardedEventType {

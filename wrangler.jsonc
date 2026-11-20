@@ -2,7 +2,7 @@
   "name": "peat-botly",
   "main": "src/index.ts",
   "observability": {
-    "enabled": false,
+    "enabled": true,
     "head_sampling_rate": 1,
     "logs": {
       "enabled": true,

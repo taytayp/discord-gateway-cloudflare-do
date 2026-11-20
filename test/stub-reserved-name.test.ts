@@ -9,8 +9,7 @@
  *
  * These tests pin the workaround: the public method is exposed as
  * `start()`, which has no Fetcher collision and dispatches correctly.
- * `connect()` survives as an in-class alias for `runInDurableObject`
- * callers and will be removed in 0.2.
+ * The class intentionally does not define a `connect()` RPC method.
  */
 import { env } from "cloudflare:test";
 import { describe, it, expect } from "vitest";
