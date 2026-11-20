@@ -1,5 +1,9 @@
+import { DiscordGatewayDO } from "./durable-object";
 import type { DiscordGatewayOptions } from "./types";
-import type { DiscordGatewayDO } from "./durable-object";
+
+// Re-export the Durable Object class so Cloudflare can instantiate it
+export { DiscordGatewayDO };
+
 
 export type {
   DiscordGatewayOptions,
@@ -8,16 +12,22 @@ export type {
   GatewayState,
 } from "./types";
 
+export function getGatewayStub(
+  options: DiscordGatewayOptions,
+): DurableObjectStub<DiscordGatewayDO> {
+  const name = options.name ?? "default";
+  const id = options.namespace.idFromName(name);
+  return options.locationHint
+    ? options.namespace.get(id, { locationHint: options.locationHint })
+    : options.namespace.get(id);
+}
+
 interface Env {
   DISCORD_GATEWAY: DurableObjectNamespace<DiscordGatewayDO>;
   DISCORD_BOT_TOKEN: string;
   DISCORD_GATEWAY_SECRET: string;
 }
 
-import { DiscordGatewayDO, getGatewayStub } from "discord-gateway-cloudflare-do";
-
-// Re-export the Durable Object class so Cloudflare can instantiate it
-export { DiscordGatewayDO };
 
 interface Env {
   DISCORD_GATEWAY: DurableObjectNamespace<DiscordGatewayDO>;
