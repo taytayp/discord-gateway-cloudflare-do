@@ -222,6 +222,21 @@ export class DiscordGatewayDO<TEnv = unknown> extends DurableObject<TEnv> {
     };
   }
 
+  /** Atomically increment a named counter and return the new value. */
+  async incrementCounter(name: string): Promise<number> {
+    return this.ctx.storage.transaction(async (txn) => {
+      const key = `counter:${name}`;
+      const next = ((await txn.get<number>(key)) ?? 0) + 1;
+      await txn.put(key, next);
+      return next;
+    });
+  }
+
+  /** Read a named counter without changing it. */
+  async getCounter(name: string): Promise<number> {
+    return (await this.ctx.storage.get<number>(`counter:${name}`)) ?? 0;
+  }
+
   // -- DO alarm handler ----------------------------------------------------
 
   /**

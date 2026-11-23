@@ -4,16 +4,7 @@ const QUESTIONS = {
   cursing: {
     type: "noul",
     instructions: "Does this message contain cursing, swearing, or vulgar language?",
-  },
-  tone: {
-    type: "choice",
-    instructions: "What tone suits this message?",
-    criteria: {
-      warm: "Friendly and encouraging",
-      playful: "Witty and a little silly",
-      terse: "Minimal and matter-of-fact",
-    },
-  },
+  }
 } as const;
 
 export async function judgeMessage(ai: Ai, text: string) {
@@ -25,7 +16,6 @@ export async function judgeMessage(ai: Ai, text: string) {
   })) as {
     answers: {
       cursing: { noul: number };
-      tone: { choice: string };
     };
     usage?: { input_tokens?: number; output_tokens?: number };
   };

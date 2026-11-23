@@ -196,12 +196,19 @@ async function handleMessage(
   try {
     const result = await judgeMessage(env.AI, msg.content);
     console.log("clef judgment", { messageId: msg.id, ...result });
+
+    if (result.answers.cursing.noul >= 0.95) {
+      const gateway = getGatewayStub({ namespace: env.DISCORD_GATEWAY });
+      const count = await gateway.incrementCounter("swears");
+      console.log("counter", { name: "swears", count });
+    }
   } catch (error) {
     console.error("clef judgment failed", {
       messageId: msg.id,
       error: String(error),
     });
   }
+
 
   if (text.includes("lmao") && Math.random() < 0.25) {
     await discord.react("yusuke:788128744308211762");
