@@ -53,7 +53,8 @@ const commands: Record<string, CommandHandler> = {
   "!ping": (discord) => discord.reply("Pong! 🏓"),
   "!bing": (discord) =>
     discord.replyWithGif("bong! :statue_of_liberty:", GIF_URL),
-};
+  "!swears": (discord) => discord.getSwearBucks(),
+}; // TODO: make a menu of these commands available to the crew
 
 // -- Worker entrypoint ----------------------------------------------------
 
@@ -151,7 +152,11 @@ async function handleEvent(
       const message = event.data as DiscordMessage;
       await handleMessage(
         message,
-        createMessageContext(message, env.DISCORD_BOT_TOKEN),
+        createMessageContext(
+          message,
+          env.DISCORD_BOT_TOKEN,
+          () => getGatewayStub({ namespace: env.DISCORD_GATEWAY }).getSwearBucks(),
+        ),
         env,
       );
       break;
@@ -197,7 +202,7 @@ async function handleMessage(
     const result = await judgeMessage(env.AI, msg.content);
     console.log("clef judgment", { messageId: msg.id, ...result });
 
-    if (result.answers.cursing.noul >= 0.95) {
+    if (result.answers.cursing.noul >= 0.90) {
       const gateway = getGatewayStub({ namespace: env.DISCORD_GATEWAY });
       const count = await gateway.incrementCounter("swears");
       console.log("counter", { name: "swears", count });

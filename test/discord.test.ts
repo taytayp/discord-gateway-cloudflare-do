@@ -197,12 +197,12 @@ describe("createMessageContext", () => {
   it("exposes the triggering message", () => {
     const msg = message();
 
-    expect(createMessageContext(msg, "token").message).toBe(msg);
+    expect(createMessageContext(msg, "token", async () => 0).message).toBe(msg);
   });
 
   it("binds reply and replyWithGif to the message channel", async () => {
     const fetch = fetchSpy();
-    const discord = createMessageContext(message(), "token");
+    const discord = createMessageContext(message(), "token", async () => 0);
 
     await discord.reply("pong");
     await discord.replyWithGif("caption", "https://gifs.example/cat.gif");
@@ -221,7 +221,7 @@ describe("createMessageContext", () => {
 
   it("binds react to the message channel and id", async () => {
     const fetch = fetchSpy();
-    const discord = createMessageContext(message(), "token");
+    const discord = createMessageContext(message(), "token", async () => 0);
 
     await discord.react("👍");
 
@@ -232,7 +232,7 @@ describe("createMessageContext", () => {
 
   it("sends plain messages and GIFs to arbitrary channels", async () => {
     const fetch = fetchSpy();
-    const discord = createMessageContext(message(), "token");
+    const discord = createMessageContext(message(), "token", async () => 0);
 
     await discord.send("other-channel", "hello");
     await discord.sendGif("other-channel", "caption", "https://gifs.example/x");

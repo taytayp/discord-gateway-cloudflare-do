@@ -237,6 +237,11 @@ export class DiscordGatewayDO<TEnv = unknown> extends DurableObject<TEnv> {
     return (await this.ctx.storage.get<number>(`counter:${name}`)) ?? 0;
   }
 
+  /** Read the swear jar total. */
+  async getSwearBucks(): Promise<number> {
+    return this.getCounter("swears");
+  }
+
   // -- DO alarm handler ----------------------------------------------------
 
   /**

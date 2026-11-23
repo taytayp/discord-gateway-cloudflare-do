@@ -7,6 +7,11 @@ const REACTION_DELAY_MS = 400;
 /** Fallback wait when Discord returns 429 without a usable retry_after. */
 const DEFAULT_RETRY_AFTER_SECONDS = 1;
 
+const SWEAR_BUCKS = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+});
+
 /** Subset of Discord's MESSAGE_CREATE payload used by the bot. */
 export interface DiscordMessage {
   id: string;
@@ -48,6 +53,9 @@ export interface MessageContext {
 
   /** Reply in the same channel with a GIF embed. */
   replyWithGif(content: string, url: string): Promise<void>;
+
+  /** Reply with the current swear jar total. */
+  getSwearBucks(): Promise<void>;
 
   /** Add one or more reactions to the triggering message. */
   react(...emojis: string[]): Promise<void>;
@@ -223,6 +231,7 @@ export function createDiscordApi(botToken: string): DiscordApi {
 export function createMessageContext(
   message: DiscordMessage,
   botToken: string,
+  readSwearBucks: () => Promise<number>,
 ): MessageContext {
   const api = createDiscordApi(botToken);
 
@@ -231,6 +240,13 @@ export function createMessageContext(
     reply: (content) => api.sendMessage(message.channel_id, content),
     replyWithGif: (content, url) =>
       api.sendGif(message.channel_id, content, url),
+    getSwearBucks: async () => {
+      const amount = SWEAR_BUCKS.format(await readSwearBucks());
+      await api.sendMessage(
+        message.channel_id,
+        `there is ${amount} in the swear jar`,
+      );
+    },
     react: (...emojis) =>
       api.addReactions(message.channel_id, message.id, emojis),
     send: (channelId, content) => api.sendMessage(channelId, content),

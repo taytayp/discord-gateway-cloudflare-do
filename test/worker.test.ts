@@ -30,6 +30,7 @@ function makeEnv() {
       reconnectAttempts: 0,
     }),
     incrementCounter: vi.fn().mockResolvedValue(1),
+    getSwearBucks: vi.fn().mockResolvedValue(0),
   };
   const namespace = {
     idFromName: vi.fn(() => "id"),
