@@ -17,6 +17,15 @@ export interface DiscordMessage {
   mentions?: Array<{ id: string }>;
 }
 
+// create a poll
+export interface PollOptions {
+  question: string;
+  answers: string[];
+  durationHours?: number;
+  allowMultiselect?: boolean;
+  content?: string
+}
+
 /**
  * Small helper bound to a single incoming message.
  *
@@ -48,6 +57,9 @@ export interface MessageContext {
 
   /** Send a GIF embed to any channel. */
   sendGif(channelId: string, content: string, url: string): Promise<void>;
+
+  /** List this guild's custom emojis as `name:id` strings. */
+  listCustomEmojis(): Promise<string[]>;
 }
 
 const sleep = (ms: number) =>
@@ -58,7 +70,7 @@ const sleep = (ms: number) =>
  * Create one per request/message; construction is cheap.
  */
 export class DiscordApi {
-  constructor(private readonly botToken: string) {}
+  constructor(private readonly botToken: string) { }
 
   /** Send a plain text message. */
   async sendMessage(channelId: string, content: string): Promise<void> {
@@ -66,6 +78,23 @@ export class DiscordApi {
       method: "POST",
       body: JSON.stringify({ content }),
     });
+  }
+
+  async listGuildEmojis(guildId: string): Promise<string[]> {
+    const response = await this.request(`/guilds/${guildId}/emojis`, {
+      method: "GET",
+    });
+    if (!response.ok) return [];
+
+    const emojis = (await response.json()) as Array<{
+      id: string | null;
+      name: string | null;
+      available?: boolean;
+    }>;
+
+    return emojis
+      .filter((e) => e.id && e.name && e.available !== false)
+      .map((e) => `${e.name}:${e.id}`);
   }
 
   /** Send a message with a GIF embed. */
@@ -81,6 +110,22 @@ export class DiscordApi {
         embeds: [{ image: { url } }],
       }),
     });
+  }
+
+  /** Make a poll */
+  async sendPoll(channelId: string, options: PollOptions): Promise<void> {
+    await this.request(`/channels/${channelId}/messages`, {
+      method: 'POST',
+      body: JSON.stringify({
+        content: options.content ?? "poll time",
+        poll: {
+          question: { text: options.question },
+          answers: options.answers.map((text) => ({ poll_media: { text } })),
+          duration: options.durationHours ?? 168,
+          allow_multiselect: options.allowMultiselect ?? false,
+        }
+      })
+    })
   }
 
   /** Add multiple reactions to a message, spacing them out. */
@@ -107,7 +152,7 @@ export class DiscordApi {
       `${DISCORD_API}/channels/${channelId}/messages/${messageId}/reactions/` +
       `${encodeURIComponent(emoji)}/@me`;
 
-    for (;;) {
+    for (; ;) {
       const response = await fetch(url, {
         method: "PUT",
         headers: {
@@ -191,5 +236,9 @@ export function createMessageContext(
     send: (channelId, content) => api.sendMessage(channelId, content),
     sendGif: (channelId, content, url) =>
       api.sendGif(channelId, content, url),
+    listCustomEmojis: () =>
+      message.guild_id
+        ? api.listGuildEmojis(message.guild_id)
+        : Promise.resolve([]),
   };
-}
+};

@@ -1,6 +1,7 @@
 import { DiscordGatewayDO } from "./durable-object";
 import {
   createMessageContext,
+  createDiscordApi,
   type DiscordMessage,
   type MessageContext,
 } from "./discord";
@@ -42,14 +43,6 @@ const GIF_URL =
 
 type CommandHandler = (discord: MessageContext) => Promise<void> | void;
 
-const emoji_list = [
-  "CattoBlush:768248173683933237",
-  "whaaaa:1538182413157404672",
-  "negative:959530459065368646",
-  "stare:1199938325323202660",
-  "yell:768872467674300416",
-  "evilpatrick:770382238004543558"
-]
 /**
  * Exact-match commands, keyed by the lowercased message content.
  * Add new commands here without touching the gateway plumbing.
@@ -58,9 +51,6 @@ const commands: Record<string, CommandHandler> = {
   "!ping": (discord) => discord.reply("Pong! 🏓"),
   "!bing": (discord) =>
     discord.replyWithGif("bong! :statue_of_liberty:", GIF_URL),
-  "!spin": (discord) => discord.react(
-    emoji_list[Math.floor(Math.random() * emoji_list.length)]
-  )
 };
 
 // -- Worker entrypoint ----------------------------------------------------
@@ -91,7 +81,25 @@ export default {
 
     return new Response("Not found", { status: 404 });
   },
+
+  // poll for mtg lol
+  async scheduled(
+    _controller: ScheduledController,
+    env: Env,
+    ctx: ExecutionContext,
+  ): Promise<void> {
+    ctx.waitUntil(postWeeklyPoll(env))
+  }
 };
+
+async function postWeeklyPoll(env: Env): Promise<void> {
+  const api = createDiscordApi(env.DISCORD_BOT_TOKEN);
+  await api.sendPoll("1337172094861181029", {
+    question: "Want to play magic online NEXT Sunday?",
+    answers: ["yes", "no"],
+    durationHours: 48
+  })
+}
 
 // -- Gateway webhook + management -----------------------------------------
 
@@ -183,6 +191,16 @@ async function handleMessage(
 
   if (text.includes("lmao") && Math.random() < 0.25) {
     await discord.react("yusuke:788128744308211762");
+  }
+
+  if (text.includes("!spin")) {
+    const emojis = await discord.listCustomEmojis();
+    if (emojis.length) {
+      await discord.react(emojis[Math.floor(Math.random() * emojis.length)]);
+    }
+    else {
+      await discord.react("⚠️")
+    }
   }
 
   if (text.includes(" bot ") || text === "bot") {
