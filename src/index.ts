@@ -5,6 +5,7 @@ import {
   type DiscordMessage,
   type MessageContext,
 } from "./discord";
+import { judgeMessage } from "./clef";
 import type {
   DiscordGatewayOptions,
   ForwardedGatewayEvent,
@@ -24,6 +25,7 @@ interface Env {
   DISCORD_GATEWAY: DurableObjectNamespace<DiscordGatewayDO>;
   DISCORD_BOT_TOKEN: string;
   DISCORD_GATEWAY_SECRET: string;
+  AI: Ai;
 }
 
 export function getGatewayStub(
@@ -150,6 +152,7 @@ async function handleEvent(
       await handleMessage(
         message,
         createMessageContext(message, env.DISCORD_BOT_TOKEN),
+        env,
       );
       break;
     }
@@ -177,6 +180,7 @@ async function handleEvent(
 async function handleMessage(
   msg: DiscordMessage,
   discord: MessageContext,
+  env: Env,
 ): Promise<void> {
   // Ignore bot messages (including our own).
   if (msg.author.bot) return;
@@ -187,6 +191,16 @@ async function handleMessage(
   const command = commands[text];
   if (command) {
     return command(discord);
+  }
+
+  try {
+    const result = await judgeMessage(env.AI, msg.content);
+    console.log("clef judgment", { messageId: msg.id, ...result });
+  } catch (error) {
+    console.error("clef judgment failed", {
+      messageId: msg.id,
+      error: String(error),
+    });
   }
 
   if (text.includes("lmao") && Math.random() < 0.25) {

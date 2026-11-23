@@ -5,6 +5,14 @@ import type { DiscordMessage } from "../src/discord";
 const BOT_TOKEN = "bot-token";
 const WEBHOOK_SECRET = "gateway-secret";
 const API = "https://discord.com/api/v10";
+const CLEF_RESULT = {
+  answers: {
+    shouldReply: { noul: 0.91 },
+    intent: { choice: "chat" },
+    tone: { choice: "warm" },
+  },
+  usage: { input_tokens: 12, output_tokens: 0 },
+};
 
 type WorkerEnv = Parameters<typeof worker.fetch>[1];
 
@@ -26,13 +34,17 @@ function makeEnv() {
     idFromName: vi.fn(() => "id"),
     get: vi.fn(() => stub),
   };
+  const ai = {
+    run: vi.fn().mockResolvedValue(CLEF_RESULT),
+  };
   const env = {
     DISCORD_GATEWAY: namespace,
     DISCORD_BOT_TOKEN: BOT_TOKEN,
     DISCORD_GATEWAY_SECRET: WEBHOOK_SECRET,
+    AI: ai,
   } as unknown as WorkerEnv;
 
-  return { env, stub, namespace };
+  return { env, stub, namespace, ai };
 }
 
 function makeContext() {
@@ -246,6 +258,26 @@ describe("handleMessage via GATEWAY_MESSAGE_CREATE", () => {
 
     await dispatch(env, messageEvent({ content: "just chatting" }));
 
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("logs a Clef judgment for a non-command message", async () => {
+    const { env, ai } = makeEnv();
+    const fetch = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(null, { status: 204 }),
+    );
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+
+    await dispatch(env, messageEvent({ content: "just chatting" }));
+
+    expect(ai.run).toHaveBeenCalledWith(
+      "@cf/cloudflare/clef-flash",
+      expect.objectContaining({ state: "just chatting" }),
+    );
+    expect(log).toHaveBeenCalledWith("clef judgment", {
+      messageId: "msg-1",
+      ...CLEF_RESULT,
+    });
     expect(fetch).not.toHaveBeenCalled();
   });
 
